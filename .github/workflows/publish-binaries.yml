@@ -1,0 +1,38 @@
+# SPDX-License-Identifier: MIT
+# Adapted from https://github.com/checkerschaf/sherlock-deno/blob/194460145e3ec14d1b5af63bd1f408a184d90c09/.github/workflows/publish-binaries.yml
+
+name: Publish Binaries
+
+on:
+  push:
+    tags:
+      - "*"
+
+jobs:
+  publish:
+    name: Publish binaries for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            asset_name: trivia-linux
+          - os: windows-latest
+            asset_name: trivia-windows.exe
+          - os: macos-latest
+            asset_name: trivia-macos
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup Deno
+        uses: denoland/setup-deno@v1
+        with:
+          deno-version: v1.x
+      - name: Compile to binary
+        run: deno compile --output=${{ matrix.asset_name }} -q --allow-net bin/trivia.ts
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          asset_name: ${{ matrix.asset_name }}
+          file: ${{ matrix.asset_name }}
+          tag: ${{ github.ref }}
