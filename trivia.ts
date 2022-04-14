@@ -8,11 +8,12 @@ export interface TypedResponse<
   >(): Promise<P>;
 }
 
+// deno-fmt-ignore
 export const encodeURLQueryString = (
   params: Record<string, string | number | boolean>,
 ) =>
   Object.keys(params)
-    .map((k) => params[k] ? encodeURIComponent(k) + "=" + encodeURIComponent(params[k]) : '')
+    .map((k) => params[k] ? encodeURIComponent(k) + "=" + encodeURIComponent(params[k]) : "")
     .join("&");
 
 // Main Types

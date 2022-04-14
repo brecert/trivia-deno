@@ -70,111 +70,115 @@ const validateEnum = (valid: string[], val: string, name: string) => {
   return true;
 };
 
-const parsedArgs = parse(Deno.args, {
-  boolean: ["help", "json"],
-  string: ["type", "difficulty"],
-  alias: {
-    help: "h",
-  },
-  default: {
-    amount: 1,
-  },
-});
+async function main() {
+  const parsedArgs = parse(Deno.args, {
+    boolean: ["help", "json"],
+    string: ["type", "difficulty"],
+    alias: {
+      help: "h",
+    },
+    default: {
+      amount: 1,
+    },
+  });
 
-let exitFlag = false;
+  let exitFlag = false;
 
-// todo: proper help exit
-if (parsedArgs.h || parsedArgs.help) {
-  console.log(HELP);
-  Deno.exit(0);
-}
+  // todo: proper help exit
+  if (parsedArgs.h || parsedArgs.help) {
+    console.log(HELP);
+    Deno.exit(0);
+  }
 
-if (parsedArgs.amount) {
-  exitFlag ||= !validateRange(1, 50, parsedArgs.amount, "amount");
-}
+  if (parsedArgs.amount) {
+    exitFlag ||= !validateRange(1, 50, parsedArgs.amount, "amount");
+  }
 
-if (parsedArgs.category) {
-  exitFlag ||= !validateRange(1, 24, parsedArgs.category, "category");
-}
+  if (parsedArgs.category) {
+    exitFlag ||= !validateRange(1, 24, parsedArgs.category, "category");
+  }
 
-if (parsedArgs.difficulty) {
-  parsedArgs.difficulty = parsedArgs.difficulty.toLowerCase();
+  if (parsedArgs.difficulty) {
+    parsedArgs.difficulty = parsedArgs.difficulty.toLowerCase();
 
-  exitFlag ||= !validateEnum(
-    ["easy", "medium", "hard"],
-    parsedArgs.difficulty,
-    "difficulty",
-  );
-}
-
-if (parsedArgs.type) {
-  parsedArgs.type = parsedArgs.type.toLowerCase();
-
-  exitFlag ||= !validateEnum(
-    ["multiple", "boolean"],
-    parsedArgs.type,
-    "type",
-  );
-}
-
-if (exitFlag) Deno.exit(1);
-
-const questions = await triviaFetch({
-  amount: 5,
-  ...parsedArgs,
-  encode: Encoding.Base64,
-  token: undefined,
-})
-  .then((res) => res.json())
-  .then((res) => res.results.map((res) => decodeQuestion(res, atob)));
-
-if (parsedArgs.json) {
-  console.log(JSON.stringify(questions));
-  Deno.exit(0);
-}
-
-let correct = 0;
-for (const question of questions) {
-  const answers = getAnswers(question);
-  let chosenIndex = -1;
-
-  while (true) {
-    chosenIndex = parseInt(
-      prompt(
-        question.question + "\n" +
-          answers.map((ans, i) => `[${i + 1}] ${ans.answer}`).join("\n") +
-          "\n:",
-      ) ?? "-1",
+    exitFlag ||= !validateEnum(
+      ["easy", "medium", "hard"],
+      parsedArgs.difficulty,
+      "difficulty",
     );
+  }
 
-    if (!chosenIndex || !(chosenIndex - 1 in answers)) {
-      console.log();
-      console.warn(
-        `'${chosenIndex}' is not a valid selection between 1 and ${answers.length}, try selecting again.`,
+  if (parsedArgs.type) {
+    parsedArgs.type = parsedArgs.type.toLowerCase();
+
+    exitFlag ||= !validateEnum(
+      ["multiple", "boolean"],
+      parsedArgs.type,
+      "type",
+    );
+  }
+
+  if (exitFlag) Deno.exit(1);
+
+  const questions = await triviaFetch({
+    amount: 5,
+    ...parsedArgs,
+    encode: Encoding.Base64,
+    token: undefined,
+  })
+    .then((res) => res.json())
+    .then((res) => res.results.map((res) => decodeQuestion(res, atob)));
+
+  if (parsedArgs.json) {
+    console.log(JSON.stringify(questions));
+    Deno.exit(0);
+  }
+
+  let correct = 0;
+  for (const question of questions) {
+    const answers = getAnswers(question);
+    let chosenIndex = -1;
+
+    while (true) {
+      chosenIndex = parseInt(
+        prompt(
+          question.question + "\n" +
+            answers.map((ans, i) => `[${i + 1}] ${ans.answer}`).join("\n") +
+            "\n:",
+        ) ?? "-1",
       );
-      console.log();
-      continue;
+
+      if (!chosenIndex || !(chosenIndex - 1 in answers)) {
+        console.log();
+        console.warn(
+          `'${chosenIndex}' is not a valid selection between 1 and ${answers.length}, try selecting again.`,
+        );
+        console.log();
+        continue;
+      }
+
+      break;
     }
+    console.log();
 
-    break;
+    const chosenAnswer = answers[chosenIndex - 1];
+    const correctIndex = answers.findIndex((a) => a.correct) + 1;
+    if (chosenAnswer.correct) {
+      console.log(
+        `Correct! [${chosenIndex}] ${chosenAnswer.answer} was the right answer!`,
+      );
+      correct += 1;
+    } else {
+      console.log(
+        `Incorrect! [${chosenIndex}] ${chosenAnswer.answer} was the wrong answer!\nThe correct answer was: [${correctIndex}] ${question.correct_answer}`,
+      );
+    }
+    console.log();
   }
-  console.log();
 
-  const chosenAnswer = answers[chosenIndex - 1];
-  const correctIndex = answers.findIndex((a) => a.correct) + 1;
-  if (chosenAnswer.correct) {
-    console.log(
-      `Correct! [${chosenIndex}] ${chosenAnswer.answer} was the right answer!`,
-    );
-    correct += 1;
-  } else {
-    console.log(
-      `Incorrect! [${chosenIndex}] ${chosenAnswer.answer} was the wrong answer!\nThe correct answer was: [${correctIndex}] ${question.correct_answer}`,
-    );
+  if (questions.length > 1) {
+    console.log(`Total Score: ${correct} / ${questions.length}`);
   }
-  console.log();
 }
 
-if (questions.length > 1) {
-  console.log(`Total Score: ${correct} / ${questions.length}`);
-}
+if (import.meta.main) main();
