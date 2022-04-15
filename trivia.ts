@@ -1,5 +1,6 @@
 // Utils
 
+/** A simple typed version of the fetch {@link Response} to a request. */
 export interface TypedResponse<
   T extends Record<string, unknown> | unknown = Record<string, unknown>,
 > extends Response {
@@ -9,7 +10,7 @@ export interface TypedResponse<
 }
 
 // deno-fmt-ignore
-export const encodeURLQueryString = (
+const encodeURLQueryString = (
   params: Record<string, string | number | boolean>,
 ) =>
   Object.keys(params)
@@ -18,6 +19,7 @@ export const encodeURLQueryString = (
 
 // Main Types
 
+/** Represents an OpenTDB question, encoded or not. */
 export type Question = {
   type: string;
   category: string;
@@ -27,6 +29,14 @@ export type Question = {
   incorrect_answers: string[];
 };
 
+/** Represents an OpenTDB question, decoded */
+export type DecodedQuestion = Question & {
+  type: QuestionType;
+  category: Category;
+  difficulty: Difficulty;
+};
+
+/** Response code for OpenTDB responses */
 export const enum ResponseCode {
   Success = 0,
   NoResults = 1,
@@ -82,11 +92,27 @@ export const enum QuestionType {
   Boolean = "boolean",
 }
 
+/** The way values should be encoded by the OpenTDB */
 export const enum Encoding {
-  /** The default encoding */
+  /**
+   * The default encoding
+   *
+   * `Don&‌#039;t forget that &‌pi; = 3.14 &‌amp; doesn&‌#039;t equal 3.`
+   */
   HTMLCodes = "",
 
+  /**
+   * URL Encoding ({@link https://www.ietf.org/rfc/rfc3986.txt RFC 3986})
+   *
+   * `Don%27t%20forget%20that%20%CF%80%20%3D%203.14%20%26%20doesn%27t%20equal%203.`
+   */
   URL = "url3986",
+
+  /**
+   * Base64 Encoding
+   *
+   * `RG9uJ3QgZm9yZ2V0IHRoYXQgz4AgPSAzLjE0ICYgZG9lc24ndCBlcXVhbCAzLg==`
+   */
   Base64 = "base64",
 }
 
@@ -112,8 +138,6 @@ export type TriviaParams = {
 
 export type TriviaResponse = {
   response_code: ResponseCode;
-
-  /** List of questions */
   results: Question[];
 };
 
@@ -129,25 +153,32 @@ export type TokenResponse = {
 
 // Main Code
 
+/** fetch and interact with OpenTDB api tokens */
 export const tokenFetch = (
   params: TokenParams,
 ): Promise<TypedResponse<{ "application/json": TokenResponse }>> =>
   fetch("https://opentdb.com/api_token.php?" + encodeURLQueryString(params));
 
+/** fetch questions from the OpenTDB */
 export const triviaFetch = (
   params: TriviaParams,
 ): Promise<TypedResponse<{ "application/json": TriviaResponse }>> =>
   fetch("https://opentdb.com/api.php?" + encodeURLQueryString(params));
 
-/** Utility function to help with decoding questions */
+/**
+ * Utility function to help with decoding questions.
+ *
+ * The type signature assumes the text has been properly decoded.
+ */
 export const decodeQuestion = (
   question: Question,
   fn: (text: string) => string,
-): Question => ({
-  type: fn(question.type),
-  category: fn(question.category),
-  question: fn(question.question),
-  difficulty: fn(question.difficulty),
-  correct_answer: fn(question.correct_answer),
-  incorrect_answers: question.incorrect_answers.map(fn),
-});
+): DecodedQuestion =>
+  ({
+    type: fn(question.type),
+    category: fn(question.category),
+    question: fn(question.question),
+    difficulty: fn(question.difficulty),
+    correct_answer: fn(question.correct_answer),
+    incorrect_answers: question.incorrect_answers.map(fn),
+  }) as DecodedQuestion;

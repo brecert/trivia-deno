@@ -1,5 +1,7 @@
 # Trivia
 
+![@brecert/trivia](https://img.shields.io/npm/v/@brecert/trivia) [![deno module](https://shield.deno.dev/x/trivia_deno)](https://shield.deno.dev/x/trivia_deno)
+
 This package contains a typed fetch builder and some utils for working with the [OpenTDB](https://opentdb.com/) api.
 
 # Usage
